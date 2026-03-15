@@ -2,6 +2,11 @@ from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 import csv
 
+
+def _normalize_label(s: str) -> str:
+    """Normalize genre/mood labels: lowercase, strip hyphens and spaces."""
+    return s.lower().replace("-", "").replace(" ", "").strip()
+
 @dataclass
 class Song:
     """
@@ -54,14 +59,14 @@ class Recommender:
         # Basic weighted scoring based on user preferences and song attributes.
         score = 0.0
 
-        if song.genre.lower() == user.favorite_genre.lower():
-            score += 0.35
+        if _normalize_label(song.genre) == _normalize_label(user.favorite_genre):
+            score += 0.50
 
-        if song.mood.lower() == user.favorite_mood.lower():
+        if _normalize_label(song.mood) == _normalize_label(user.favorite_mood):
             score += 0.25
 
         energy_match = self._closeness_score(song.energy, user.target_energy, 0.0, 1.0)
-        score += 0.30 * energy_match
+        score += 0.20 * energy_match
 
         preferred_acoustic = 1.0 if user.likes_acoustic else 0.0
         acoustic_match = self._closeness_score(song.acousticness, preferred_acoustic, 0.0, 1.0)
@@ -76,9 +81,9 @@ class Recommender:
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
         reasons = []
-        if song.genre.lower() == user.favorite_genre.lower():
+        if _normalize_label(song.genre) == _normalize_label(user.favorite_genre):
             reasons.append(f"matches your favorite genre ({user.favorite_genre})")
-        if song.mood.lower() == user.favorite_mood.lower():
+        if _normalize_label(song.mood) == _normalize_label(user.favorite_mood):
             reasons.append(f"matches your preferred mood ({user.favorite_mood})")
 
         energy_match = self._closeness_score(song.energy, user.target_energy, 0.0, 1.0)
@@ -127,20 +132,20 @@ def _score_song_dict(user_prefs: Dict, song: Dict) -> Tuple[float, str]:
     score = 0.0
     reasons: List[str] = []
 
-    preferred_genre = str(user_prefs.get("genre", "")).lower().strip()
-    preferred_mood = str(user_prefs.get("mood", "")).lower().strip()
+    preferred_genre = _normalize_label(str(user_prefs.get("genre", "")))
+    preferred_mood = _normalize_label(str(user_prefs.get("mood", "")))
     preferred_energy = float(user_prefs.get("energy", 0.5))
 
-    if preferred_genre and song["genre"].lower() == preferred_genre:
-        score += 0.35
+    if preferred_genre and _normalize_label(song["genre"]) == preferred_genre:
+        score += 0.50
         reasons.append("genre match")
 
-    if preferred_mood and song["mood"].lower() == preferred_mood:
+    if preferred_mood and _normalize_label(song["mood"]) == preferred_mood:
         score += 0.25
         reasons.append("mood match")
 
     energy_similarity = _numeric_feature_score(song["energy"], preferred_energy, 0.0, 1.0)
-    score += 0.30 * energy_similarity
+    score += 0.20 * energy_similarity
     reasons.append(f"energy similarity {energy_similarity:.2f}")
 
     preferred_acoustic = user_prefs.get("likes_acoustic")

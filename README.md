@@ -201,60 +201,70 @@ Describe your dataset.
 - Whose taste does this data mostly reflect
 
 ---
+The data set is 23 songs long. Originally I believe the data set was only 5-10 songs long and was missing important genres such as hip-hop and jazz. I added these genres to the dataset as well as other songs to have a more rounded source of data.
 
-## 5. Strengths
+## 5. Strengths  
 
-Where does your recommender work well
+Where does your system seem to work well  
 
-You can think about:
-- Situations where the top results "felt right"
-- Particular user profiles it served well
-- Simplicity or transparency benefits
+Prompts:  
 
----
-
-## 6. Limitations and Bias
-
-Where does your recommender struggle
-
-Some prompts:
-- Does it ignore some genres or moods
-- Does it treat all users as if they have the same taste shape
-- Is it biased toward high energy or one genre by default
-- How could this be unfair if used in a real product
+- User types for which it gives reasonable results  
+- Any patterns you think your scoring captures correctly  
+- Cases where the recommendations matched your intuition  
 
 ---
+It gave good scores off the bat to the default user pref which consisted of pop music. I believe in this case the Recommender system matched my intuition of what I think that user would have liked.
+## 6. Limitations and Bias 
 
-## 7. Evaluation
+Where the system struggles or behaves unfairly. 
 
-How did you check your system
+Prompts:  
 
-Examples:
-- You tried multiple user profiles and wrote down whether the results matched your expectations
-- You compared your simulation to what a real app like Spotify or YouTube tends to recommend
-- You wrote tests for your scoring logic
-
-You do not need a numeric metric, but if you used one, explain what it measures.
-
----
-
-## 8. Future Work
-
-If you had more time, how would you improve this recommender
-
-Examples:
-
-- Add support for multiple users and "group vibe" recommendations
-- Balance diversity of songs instead of always picking the closest match
-- Use more features, like tempo ranges or lyric themes
+- Features it does not consider  
+- Genres or moods that are underrepresented  
+- Cases where the system overfits to one preference  
+- Ways the scoring might unintentionally favor some users  
 
 ---
+Intially it had a hard time scoring users that preferred hiphop. It showed preference to mood and energy over genre. It also sometimes couldn't recognize the genre due to spelling or what have you. In these cases it would overfit to pop.
 
-## 9. Personal Reflection
+## 7. Evaluation  
 
-A few sentences about what you learned:
+How you checked whether the recommender behaved as expected. 
 
-- What surprised you about how your system behaved
-- How did building this change how you think about real music recommenders
-- Where do you think human judgment still matters, even if the model seems "smart"
+Prompts:  
 
+- Which user profiles you tested  
+- What you looked for in the recommendations  
+- What surprised you  
+- Any simple tests or comparisons you ran  
+
+No need for numeric metrics unless you created some.
+
+---
+After making changes to the recommender system i believe it performs more as expected. I increased the score giving to a genre match so that genre would hold more weight and added a system to match different spellings of hiphop so that it would catch it. To confirm this i tested user_pref_3 to see if the recommendations matched my intuition.
+## 8. Future Work  
+
+Ideas for how you would improve the model next.  
+
+Prompts:  
+
+- Additional features or preferences  
+- Better ways to explain recommendations  
+- Improving diversity among the top results  
+- Handling more complex user tastes  
+
+---
+In the future maybe allowing for more nuance in the recommender. Right now it recommends based on genre straight up but that lacks nuance. Their exist so many different sub-genres of music that the csv and the model dont really capture. If i were to improve it i'd map sub genres in the user preference and add to the score depending on how many genre matches exist.
+
+## 9. Personal Reflection  
+
+A few sentences about your experience.  
+
+Prompts:  
+
+- What you learned about recommender systems  
+- Something unexpected or interesting you discovered  
+- How this changed the way you think about music recommendation apps  
+I learned a lot about model training and optimizing. At first the idea of model training seemed like an impossible task but the more i worked on this project the less daunting it seemed. This project gave me insight on how recommendation models work and allowed me to start training my own models outside of this.
