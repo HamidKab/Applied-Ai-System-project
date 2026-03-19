@@ -92,7 +92,7 @@ Prompts:
 No need for numeric metrics unless you created some.
 
 ---
-After making changes to the recommender system i believe it performs more as expected. I increased the score giving to a genre match so that genre would hold more weight and added a system to match different spellings of hiphop so that it would catch it. To confirm this i tested user_pref_3 to see if the recommendations matched my intuition.
+After making changes to the recommender system i believe it performs more as expected. I increased the score giving to a genre match so that genre would hold more weight and added a system to match different spellings of hiphop so that it would catch it. To confirm this i tested user_pref_3 to see if the recommendations matched my intuition. I also tested user1 and 2 to check matches. In this i saw some matches have over 100% match this may be a problem but we shall see.
 ## 8. Future Work  
 
 Ideas for how you would improve the model next.  
@@ -116,4 +116,4 @@ Prompts:
 - What you learned about recommender systems  
 - Something unexpected or interesting you discovered  
 - How this changed the way you think about music recommendation apps  
-I learned a lot about model training and optimizing. At first the idea of model training seemed like an impossible task but the more i worked on this project the less daunting it seemed. This project gave me insight on how recommendation models work and allowed me to start training my own models outside of this.
+I learned a lot about model training and optimizing. At first the idea of model training seemed like an impossible task but the more i worked on this project the less daunting it seemed. This project gave me insight on how recommendation models work and allowed me to start training my own models outside of this. The AI helped me plot out my training method by creating a workflow and suggesting weight which I was able to experiment with and change after the fact.

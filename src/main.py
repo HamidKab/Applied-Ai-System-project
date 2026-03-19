@@ -40,7 +40,7 @@ def main() -> None:
     "energy": 0.5,        # exactly mid-range - ties may be unpredictable
     "likes_acoustic": None  # None - may skip acoustic scoring or cause errors
 }
-    recommendations = recommend_songs(user_prefs_3, songs, k=5)
+    recommendations = recommend_songs(user_prefs_2, songs, k=5)
 
     print("\nTop recommendations:\n")
     for rec in recommendations:

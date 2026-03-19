@@ -30,6 +30,7 @@ Some prompts to answer:
 You can include a simple diagram or bullet list if helpful.
 
 ---
+The system recommends based on genre, mood, energy, tempo. The user profile consist of the preferences of genre, mood, energy, and if they like acoustics or not. The recommender should prefer genres and score it higher than other aspects. If the recommender finds a match for between a songs values and user preferences it favors those songs. If a song has a similar genre preference to a user it will be preferred rather than songs that matches a users mood and energy but doesn't match genres.
 
 ## Getting Started
 
@@ -75,6 +76,8 @@ Use this section to document the experiments you ran. For example:
 - How did your system behave for different types of users
 
 ---
+Originally I had the score weight relatively close to each other (i.e. genre +.3, mood +.25, energy +.2). In this original model it would recommend songs that had a low score match(28%) just because the mood and energy matched the users preferences. At first the recommender preferred pop even if the user preferred hiphop. To combat this I changed the weight of scores to prefer genre over all else. This resulted in higher matches in users that preferred hiphop (78%).
+
 
 ## Limitations and Risks
 
@@ -89,7 +92,7 @@ Examples:
 You will go deeper on this in your model card.
 
 ---
-
+Some limitations is the lack of nuance in the recommendations. Most people have multiple favorite genres however this system only reflects one genre. If a user favored Hiphop and jazz the recommender might only reflect one or the other rather than both. 
 ## Reflection
 
 Read and complete `model_card.md`:
@@ -151,7 +154,7 @@ flowchart TD
     C --> D[For each Song]
 
     D --> E{Genre matches favorite_genre?}
-    E -- Yes --> E1[+0.35]
+    E -- Yes --> E1[+0.50]
     E -- No --> E2[+0.00]
 
     E1 --> F{Mood matches favorite_mood?}
@@ -161,7 +164,7 @@ flowchart TD
 
     F1 --> G[Compute energy_match = closeness_score(song.energy, target_energy)]
     F2 --> G
-    G --> G1[+0.30 * energy_match]
+    G --> G1[+0.20 * energy_match]
 
     G1 --> H[Set preferred_acoustic = 1.0 if likes_acoustic else 0.0]
     H --> I[Compute acoustic_match = closeness_score(song.acousticness, preferred_acoustic)]
@@ -188,7 +191,7 @@ flowchart TD
       CS2 -- Yes --> CS3
       CS2 -- No --> CS4 --> CS5
     end
-
+This system may overprioritize genre but i dont see that as a downside
 ---
 
 ## 4. Data
