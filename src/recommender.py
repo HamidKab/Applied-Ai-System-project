@@ -7,6 +7,27 @@ def _normalize_label(s: str) -> str:
     """Normalize genre/mood labels: lowercase, strip hyphens and spaces."""
     return s.lower().replace("-", "").replace(" ", "").strip()
 
+RECOMMENDATION_STYLES: Dict[str, Dict[str, float]] = {
+    "genre-first": {
+        "genre":    0.50,
+        "mood":     0.20,
+        "energy":   0.20,
+        "acoustic": 0.10,
+    },
+    "mood-first": {
+        "genre":    0.20,
+        "mood":     0.50,
+        "energy":   0.20,
+        "acoustic": 0.10,
+    },
+    "energy-focused": {
+        "genre":    0.15,
+        "mood":     0.15,
+        "energy":   0.55,
+        "acoustic": 0.15,
+    },
+}
+
 @dataclass
 class Song:
     """
@@ -55,28 +76,29 @@ class Recommender:
         normalized_distance = abs(value - target) / feature_range
         return max(0.0, 1.0 - normalized_distance)
 
-    def _score_song(self, user: UserProfile, song: Song) -> float:
+    def _score_song(self, user: UserProfile, song: Song, weights: Dict) -> float:
         # Basic weighted scoring based on user preferences and song attributes.
         score = 0.0
 
         if _normalize_label(song.genre) == _normalize_label(user.favorite_genre):
-            score += 0.50
+            score += weights["genre"]
 
         if _normalize_label(song.mood) == _normalize_label(user.favorite_mood):
-            score += 0.25
+            score += weights["mood"]
 
         energy_match = self._closeness_score(song.energy, user.target_energy, 0.0, 1.0)
-        score += 0.20 * energy_match
+        score += weights["energy"] * energy_match
 
         preferred_acoustic = 1.0 if user.likes_acoustic else 0.0
         acoustic_match = self._closeness_score(song.acousticness, preferred_acoustic, 0.0, 1.0)
-        score += 0.10 * acoustic_match
+        score += weights["acoustic"] * acoustic_match
 
         return score
 
-    def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
+    def recommend(self, user: UserProfile, k: int = 5, style: str = "genre-first") -> List[Song]:
         # Score all songs and return the top k.
-        ranked = sorted(self.songs, key=lambda song: self._score_song(user, song), reverse=True)
+        weights = RECOMMENDATION_STYLES.get(style, RECOMMENDATION_STYLES["genre-first"])
+        ranked = sorted(self.songs, key=lambda song: self._score_song(user, song, weights), reverse=True)
         return ranked[:k]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
@@ -128,7 +150,7 @@ def _numeric_feature_score(value: float, preference: float, min_value: float, ma
     return max(0.0, 1.0 - normalized_distance)
 
 
-def _score_song_dict(user_prefs: Dict, song: Dict) -> Tuple[float, str]:
+def _score_song_dict(user_prefs: Dict, song: Dict, weights: Dict) -> Tuple[float, str]:
     score = 0.0
     reasons: List[str] = []
 
@@ -137,34 +159,35 @@ def _score_song_dict(user_prefs: Dict, song: Dict) -> Tuple[float, str]:
     preferred_energy = float(user_prefs.get("energy", 0.5))
 
     if preferred_genre and _normalize_label(song["genre"]) == preferred_genre:
-        score += 0.50
+        score += weights["genre"]
         reasons.append("genre match")
 
     if preferred_mood and _normalize_label(song["mood"]) == preferred_mood:
-        score += 0.25
+        score += weights["mood"]
         reasons.append("mood match")
 
     energy_similarity = _numeric_feature_score(song["energy"], preferred_energy, 0.0, 1.0)
-    score += 0.20 * energy_similarity
+    score += weights["energy"] * energy_similarity
     reasons.append(f"energy similarity {energy_similarity:.2f}")
 
     preferred_acoustic = user_prefs.get("likes_acoustic")
     if preferred_acoustic is not None:
         acoustic_target = 1.0 if bool(preferred_acoustic) else 0.0
         acoustic_similarity = _numeric_feature_score(song["acousticness"], acoustic_target, 0.0, 1.0)
-        score += 0.10 * acoustic_similarity
+        score += weights["acoustic"] * acoustic_similarity
         reasons.append(f"acoustic similarity {acoustic_similarity:.2f}")
 
     return score, "; ".join(reasons)
 
-def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
+def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5, style: str = "genre-first") -> List[Tuple[Dict, float, str]]:
     """
     Functional implementation of the recommendation logic.
     Required by src/main.py
     """
+    weights = RECOMMENDATION_STYLES.get(style, RECOMMENDATION_STYLES["genre-first"])
     scored: List[Tuple[Dict, float, str]] = []
     for song in songs:
-        score, explanation = _score_song_dict(user_prefs, song)
+        score, explanation = _score_song_dict(user_prefs, song, weights)
         scored.append((song, score, explanation))
 
     scored.sort(key=lambda item: item[1], reverse=True)
