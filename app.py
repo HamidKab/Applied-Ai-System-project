@@ -139,6 +139,28 @@ section[data-testid="stSidebar"] { border-right: 1px solid #4c1d95; }
 
 /* ── Dividers ──────────────────────────────────────────────── */
 hr { border-color: #2d1b69 !important; }
+
+/* ── Spotify-style search input ──────────────────────────────── */
+input[placeholder="What do you want to play?"] {
+    border-radius: 500px !important;
+    background-color: #ffffff !important;
+    color: #121212 !important;
+    border: none !important;
+    height: 48px !important;
+    font-size: 15px !important;
+    padding: 0 1.5rem !important;
+    box-shadow: none !important;
+}
+input[placeholder="What do you want to play?"]:focus {
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.25) !important;
+    border: none !important;
+}
+input[placeholder="What do you want to play?"]::placeholder { color: #737373 !important; }
+
+/* ── Transparent columns (prevents white bleed inside containers) ─ */
+[data-testid="stHorizontalBlock"], [data-testid="stColumn"] {
+    background: transparent !important;
+}
 </style>
 """
 
@@ -168,6 +190,8 @@ def init_session() -> None:
         st.session_state["autocomplete_results"] = []
     if "autocomplete_last_q" not in st.session_state:
         st.session_state["autocomplete_last_q"] = ""
+    if "recent_searches" not in st.session_state:
+        st.session_state["recent_searches"] = []
 
 
 def reset_pipeline() -> None:
@@ -204,6 +228,8 @@ def _on_autocomplete_change() -> None:
                 {
                     "title": t.get("title", ""),
                     "artist": t.get("artist", {}).get("name", ""),
+                    "cover_art": t.get("album", {}).get("cover_small", ""),
+                    "type": "Song",
                     "query_str": (
                         f"{t.get('title', '')} by {t.get('artist', {}).get('name', '')}"
                     ),
@@ -217,6 +243,82 @@ def _on_autocomplete_change() -> None:
     elif len(q) < 3:
         st.session_state["autocomplete_results"] = []
         st.session_state["autocomplete_last_q"] = ""
+
+
+def _add_to_recent_searches(entry: dict) -> None:
+    recent: list = st.session_state.get("recent_searches", [])
+    recent = [r for r in recent if r.get("query_str") != entry.get("query_str")]
+    recent.insert(0, entry)
+    st.session_state["recent_searches"] = recent[:6]
+
+
+def _render_spotify_search() -> str:
+    """Renders Spotify-style search bar with live suggestions and recent searches.
+    Returns the currently active query string."""
+
+    if "search_pending" in st.session_state:
+        st.session_state["similar_input"] = st.session_state.pop("search_pending")
+
+    st.text_input(
+        "Search",
+        key="similar_input",
+        placeholder="What do you want to play?",
+        on_change=_on_autocomplete_change,
+        label_visibility="collapsed",
+    )
+
+    autocomplete_results: list = st.session_state.get("autocomplete_results", [])
+    recent_searches: list = st.session_state.get("recent_searches", [])
+    items = autocomplete_results if autocomplete_results else recent_searches
+    is_recent = not bool(autocomplete_results) and bool(recent_searches)
+
+    if not items:
+        return st.session_state.get("similar_input", "")
+
+    with st.container(border=True):
+        if is_recent:
+            st.markdown(
+                "<p style='color:#fff;font-size:13px;font-weight:700;margin:0 0 6px'>Recent searches</p>",
+                unsafe_allow_html=True,
+            )
+
+        for i, item in enumerate(items):
+            col_thumb, col_info, col_btn = st.columns([1, 8, 2])
+
+            with col_thumb:
+                cover = item.get("cover_art", "")
+                if cover:
+                    st.markdown(
+                        f'<img src="{cover}" style="width:44px;height:44px;'
+                        f'border-radius:4px;object-fit:cover;margin-top:2px">',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        '<div style="width:44px;height:44px;background:#3d1b69;'
+                        'border-radius:4px;display:flex;align-items:center;'
+                        'justify-content:center;font-size:20px;margin-top:2px">🎵</div>',
+                        unsafe_allow_html=True,
+                    )
+
+            with col_info:
+                st.markdown(
+                    f'<div style="padding-top:4px">'
+                    f'<span style="color:#fff;font-size:14px;font-weight:500">{item["title"]}</span><br>'
+                    f'<span style="color:#a7a7a7;font-size:12px">'
+                    f'{item.get("type","Song")} &bull; {item["artist"]}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+            with col_btn:
+                if st.button("Select ↗", key=f"srch_sel_{i}", type="secondary"):
+                    st.session_state["search_pending"] = item["query_str"]
+                    _add_to_recent_searches(item)
+                    st.session_state["autocomplete_results"] = []
+                    st.rerun()
+
+    return st.session_state.get("similar_input", "")
 
 
 def _cover_play_component(
@@ -333,26 +435,9 @@ def render_preferences_tab() -> None:
     st.header("Your Music Preferences")
     state: PipelineState = st.session_state["pipeline"]
 
-    # ── Autocomplete (outside form so on_change fires per keystroke) ─────────
-    st.text_input(
-        "Find similar songs (optional)",
-        key="similar_input",
-        placeholder="e.g. Chali 2na, Charlie Puth…",
-        on_change=_on_autocomplete_change,
-        help="Type 3+ characters — Deezer suggestions appear below",
-    )
-    autocomplete_results = st.session_state.get("autocomplete_results", [])
-    selected_similar = ""
-    if autocomplete_results:
-        labels = [f"{r['title']} — {r['artist']}" for r in autocomplete_results]
-        idx = st.radio(
-            "Select a result:",
-            range(len(labels)),
-            format_func=lambda i: labels[i],
-            key="autocomplete_choice",
-            horizontal=True,
-        )
-        selected_similar = autocomplete_results[idx]["query_str"]
+    # ── Spotify-style search (outside form so on_change fires per keystroke) ──
+    st.markdown("**Find similar songs** *(optional — type 3+ characters for suggestions)*")
+    selected_similar = _render_spotify_search()
 
     st.divider()
 
