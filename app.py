@@ -23,6 +23,7 @@ from genre_detector import detect as detect_genre_multi
 from llm_client import generate_explanation, generate_boilerplate_explanation  # type: ignore[import]
 from feedback import (
     FeedbackRecord,
+    build_taste_cache,
     compute_feedback_summary,
     load_feedback,
     save_feedback,
@@ -42,7 +43,7 @@ from pipeline import (
 _THEME_CSS = """
 <style>
 /* ── Hide white Streamlit chrome ───────────────────────────── */
-header[data-testid="stHeader"] { background-color: #0d0d1a !important; border-bottom: 1px solid #2d1b69; }
+header[data-testid="stHeader"] { display: none !important; }
 [data-testid="stToolbar"] { display: none !important; }
 [data-testid="stDecoration"] { display: none !important; }
 
@@ -139,6 +140,18 @@ section[data-testid="stSidebar"] { border-right: 1px solid #4c1d95; }
 
 /* ── Dividers ──────────────────────────────────────────────── */
 hr { border-color: #2d1b69 !important; }
+
+/* ── Sidebar expand button (shown when sidebar is collapsed) ─── */
+[data-testid="stExpandSidebarButton"] {
+    background-color: #4c1d95 !important;
+    border-radius: 0 8px 8px 0 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: flex !important;
+    z-index: 999 !important;
+}
+[data-testid="stExpandSidebarButton"]:hover { background-color: #6d28d9 !important; }
+[data-testid="stExpandSidebarButton"] svg { fill: #ffffff !important; stroke: #ffffff !important; }
 
 /* ── Spotify-style search input ──────────────────────────────── */
 input[placeholder="What do you want to play?"] {
@@ -435,6 +448,16 @@ def render_preferences_tab() -> None:
     st.header("Your Music Preferences")
     state: PipelineState = st.session_state["pipeline"]
 
+    # ── Taste profile (from feedback history) ────────────────────────────────
+    taste_cache = build_taste_cache(n=10)
+    if taste_cache["top_artists"]:
+        with st.expander("Your Taste Profile (based on liked songs)", expanded=False):
+            for artist, count in taste_cache["top_artists"][:5]:
+                label = "song" if count == 1 else "songs"
+                st.markdown(f"- **{artist}** — {count} liked {label}")
+    else:
+        st.caption("No listening history yet. Like some songs to personalize future recommendations.")
+
     # ── Spotify-style search (outside form so on_change fires per keystroke) ──
     st.markdown("**Find similar songs** *(optional — type 3+ characters for suggestions)*")
     selected_similar = _render_spotify_search()
@@ -502,7 +525,12 @@ def render_preferences_tab() -> None:
         if query_for_detection:
             deezer_tracks = fetch_similar_tracks(query_for_detection, resolved_genre, k=20)
         else:
-            deezer_tracks = fetch_tracks_for_genre(resolved_genre, k=20)
+            seed_artist = taste_cache["top_artists"][0][0] if taste_cache["top_artists"] else None
+            if seed_artist:
+                deezer_tracks = fetch_similar_tracks(seed_artist, resolved_genre, k=20)
+                st.info(f"Personalizing from your history: similar to **{seed_artist}** and related artists.")
+            else:
+                deezer_tracks = fetch_tracks_for_genre(resolved_genre, k=20)
 
     if not deezer_tracks:
         st.warning("Deezer returned no tracks — check your internet connection.")
@@ -898,10 +926,30 @@ def main() -> None:
         page_title="Music Matcher+",
         page_icon="🎵",
         layout="wide",
+        initial_sidebar_state="expanded",
     )
     st.markdown(_THEME_CSS, unsafe_allow_html=True)
 
     init_session()
+
+    # Streamlit stores sidebar state in browser localStorage which overrides
+    # initial_sidebar_state on refresh. JS click on the collapsed control is
+    # the only reliable way to force it open each new session.
+    if not st.session_state.get("_sidebar_expanded"):
+        st.session_state["_sidebar_expanded"] = True
+        components.html(
+            """<script>
+            setTimeout(function(){
+                try {
+                    var btn = window.parent.document.querySelector(
+                        '[data-testid="stExpandSidebarButton"]');
+                    if (btn) btn.click();
+                } catch(e) {}
+            }, 500);
+            </script>""",
+            height=0,
+        )
+
     render_sidebar()
 
     st.title("🎵 Music Matcher+")

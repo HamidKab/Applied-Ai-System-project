@@ -1,0 +1,1 @@
+Throughout the duration of this course I have developed my skills as a software engineer that utilizes AI.To be honest at the start of the course I looked down at AI because I saw it as competition that is straining the job market. However, now with the things I know I see AI as a tool that is an extension of my expertise as a software engineer. 

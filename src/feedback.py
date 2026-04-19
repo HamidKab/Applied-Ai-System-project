@@ -61,6 +61,24 @@ def load_feedback() -> List[FeedbackRecord]:
     return records
 
 
+def build_taste_cache(n: int = 10) -> dict:
+    """
+    Read last n feedback sessions and return liked-artist frequencies.
+    Returns {"top_artists": [(name, count), ...], "total_liked": int}
+    """
+    records = load_feedback()[-n:]
+    artist_counts: dict[str, int] = {}
+    for rec in records:
+        id_to_artist = {str(s["id"]): s["artist"] for s in rec.recommendations}
+        for sid, liked in rec.song_ratings.items():
+            if liked == 1:
+                artist = id_to_artist.get(sid, "")
+                if artist:
+                    artist_counts[artist] = artist_counts.get(artist, 0) + 1
+    ranked = sorted(artist_counts.items(), key=lambda x: x[1], reverse=True)
+    return {"top_artists": ranked, "total_liked": sum(artist_counts.values())}
+
+
 def compute_feedback_summary(records: List[FeedbackRecord]) -> Dict:
     """
     Returns aggregated stats for the Analysis tab:
